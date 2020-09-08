@@ -7,8 +7,10 @@ WHITE_PIECE = pygame.image.load(os.path.join("images", "whitepiece.png"))
 BLACK_KING = pygame.image.load(os.path.join("images", "blackking.png"))
 WHITE_KING = pygame.image.load(os.path.join("images", "whiteking.png"))
 
+
 class Piece:
     OUTLINE = 2
+
     def __init__(self, color, row, col):
         self.color = color
         self.img = None
@@ -33,20 +35,15 @@ class Piece:
             self.img = BLACK_KING
         else:
             self.img = BLACK_PIECE
+
     def find_pos(self):
         self.x = self.col * SQUARE_SIZE + SQUARE_SIZE // 2
         self.y = self.row * SQUARE_SIZE + SQUARE_SIZE // 2
-    
+
     def draw(self, win):
-        #if self.king:
-            #pass
-        #else:
-            #pygame.draw.circle(win, GRAY, (self.x, self.y), self.radius, 2)
-            #pygame.draw.circle(win, self.color, (self.x, self.y), self.radius - self.OUTLINE)
-            #win.blit()
-        win.blit(self.img, (self.x - SQUARE_SIZE + self.img.get_width() - 6, self.y - SQUARE_SIZE + self.img.get_height() - 3))
-        
-    
+        win.blit(self.img, (self.x - SQUARE_SIZE + self.img.get_width() -
+                            6, self.y - SQUARE_SIZE + self.img.get_height() - 3))
+
     def update_pos(self, row, col):
         self.row = row
         self.col = col
@@ -55,7 +52,7 @@ class Piece:
     def make_king(self):
         self.king = True
         self.set_img()
-    
+
     def __str__(self):
         if self.color == WHITE:
             return "W"

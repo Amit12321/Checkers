@@ -3,11 +3,26 @@ from piece import Piece
 from assets.constants import WHITE, GREEN, RED, BLACK, WIDTH, HEIGHT, ROWS, COLS, SQUARE_SIZE
 
 
+class Move:
+    def __init__(self, piece, row_to, col_to, eat):
+        self.piece = piece
+        self.row_to = row_to
+        self.col_to = col_to
+        self.eat = eat
+
+    @staticmethod
+    def check_if_possible(possible_moves, pos):
+        for move in possible_moves:
+            if pos[0] == move.row_to and pos[1] == move.col_to:
+                return move
+        return None
+
+
 class Board:
     def __init__(self):
         self.board = [["0" for i in range(ROWS)] for j in range(COLS)]
         self.init_board()
-        
+
     def print_board(self):
         for i in range(ROWS):
             for j in range(COLS):
@@ -67,14 +82,14 @@ class Board:
         if color == BLACK:
             pieces = self.black_pieces
             for p in pieces:
-                if self.get_moves(p.row, p.col, p) != ([], None):
+                if self.get_moves(p.row, p.col, p) != []:
                     return True
             self.game_over = True
             self.winner = WHITE
         else:
             pieces = self.white_pieces
             for p in pieces:
-                if self.get_moves(p.row, p.col, p) != ([], None):
+                if self.get_moves(p.row, p.col, p) != []:
                     return True
             self.game_over = True
             self.winner = BLACK
@@ -82,60 +97,64 @@ class Board:
 
     def get_moves(self, row, col, piece):
         possible_moves = []  # list of rows, cols
-        eat = None
         if self.board[row][col] != "0":
             d = piece.direction
             if row + d >= 0 and row + d < ROWS and col + d >= 0 and col + d < COLS:
                 if self.board[row + d][col + d] == "0":
-                    possible_moves.append((row + d, col + d))
+                    possible_moves.append(Move(piece, row + d, col + d, None))
                 elif self.board[row + d][col + d].color != piece.color:
                     if row + 2*d >= 0 and row + 2*d < ROWS and col + 2*d >= 0 and \
                             col + 2*d < COLS and self.board[row + 2*d][col + 2*d] == "0":
-                        possible_moves.append((row + 2*d, col + 2*d))
-                        eat = (row + d, col + d)
+                        possible_moves.append(
+                            Move(piece, row + 2*d, col + 2*d, (row + d, col + d)))
             if row + d >= 0 and row + d < ROWS and col - d >= 0 and col - d < COLS:
                 if self.board[row + d][col - d] == "0":
-                    possible_moves.append((row + d, col - d))
+                    possible_moves.append(Move(piece, row + d, col - d, None))
                 elif self.board[row + d][col - d].color != piece.color:
                     if row + 2*d >= 0 and row + 2*d < ROWS and col - 2*d >= 0 and \
                             col - 2*d < COLS and self.board[row + 2*d][col - 2*d] == "0":
-                        possible_moves.append((row + 2*d, col - 2*d))
-                        eat = (row + d, col - d)
+                        possible_moves.append(
+                            Move(piece, row + 2*d, col - 2*d, (row + d, col - d)))
+
             if piece.king and row - d >= 0 and row - d < ROWS and col - d >= 0 and col - d < COLS:
                 if self.board[row - d][col - d] == "0":
-                    possible_moves.append((row - d, col - d))
+                    possible_moves.append(Move(piece, row - d, col - d, None))
                 elif self.board[row - d][col - d].color != piece.color:
                     if row - 2*d >= 0 and row - 2*d < ROWS and col - 2*d >= 0 and \
                             col - 2*d < COLS and self.board[row - 2*d][col - 2*d] == "0":
-                        possible_moves.append((row - 2*d, col - 2*d))
-                        eat = (row - d, col - d)
+                        possible_moves.append(
+                            Move(piece, row - 2*d, col - 2*d, (row - d, col - d)))
             if piece.king and row - d >= 0 and row - d < ROWS and col + d >= 0 and col + d < COLS:
                 if self.board[row - d][col + d] == "0":
-                    possible_moves.append((row - d, col + d))
+                    possible_moves.append(Move(piece, row - d, col + d, None))
                 elif self.board[row - d][col + d].color != piece.color:
                     if row - 2*d >= 0 and row - 2*d < ROWS and col + 2*d >= 0 and \
                             col + 2*d < COLS and self.board[row - 2*d][col + 2*d] == "0":
-                        possible_moves.append((row - 2*d, col + 2*d))
-                        eat = (row - d, col + d)
-        return (possible_moves, eat)
+                        possible_moves.append(
+                            Move(piece, row - 2*d, col + 2*d, (row - d, col + d)))
 
-    def make_move(self, piece, row, col, eat):
-        if (row, col) in self.get_moves(piece.row, piece.col, piece)[0] and self.board[row][col] == "0":
-            self.board[piece.row][piece.col] = "0"
-            self.board[row][col] = piece
-            piece.update_pos(row, col)
-            if eat:
-                i, j = eat
-                if piece.color == BLACK:
-                    self.white_pieces.remove(self.board[i][j])
-                    self.white_left -= 1
-                else:
-                    self.black_pieces.remove(self.board[i][j])
-                    self.black_left -= 1
-                self.board[i][j] = "0"
-                self.set_winner()
-            if (piece.color == BLACK and row == 0) or (piece.color == WHITE and row == ROWS - 1):
-                piece.make_king()
+        return possible_moves
+
+    def make_move(self, move):
+        row = move.row_to
+        col = move.col_to
+        piece = move.piece
+        eat = move.eat
+        self.board[piece.row][piece.col] = "0"
+        self.board[row][col] = piece
+        piece.update_pos(row, col)
+        if eat:
+            i, j = eat
+            if piece.color == BLACK:
+                self.white_pieces.remove(self.board[i][j])
+                self.white_left -= 1
+            else:
+                self.black_pieces.remove(self.board[i][j])
+                self.black_left -= 1
+            self.board[i][j] = "0"
+            self.set_winner()
+        if (piece.color == BLACK and row == 0) or (piece.color == WHITE and row == ROWS - 1):
+            piece.make_king()
 
     def change_turn(self):
         if self.turn == BLACK:
