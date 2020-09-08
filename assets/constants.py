@@ -1,0 +1,11 @@
+import pygame
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 204)
+RED = (255, 0, 0)
+GREEN = (0, 150, 0)
+GRAY = (128, 128, 128)
+
+WIDTH, HEIGHT = 800, 800
+COLS, ROWS = 8, 8
+SQUARE_SIZE = HEIGHT // ROWS
