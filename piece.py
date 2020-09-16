@@ -18,10 +18,6 @@ class Piece:
         self.set_img()
         self.row = row
         self.col = col
-        if self.color == BLACK:
-            self.direction = -1
-        else:
-            self.direction = 1
         self.x = self. y = 0
         self.find_pos()
         self.radius = SQUARE_SIZE // 3
@@ -41,8 +37,13 @@ class Piece:
         self.y = self.row * SQUARE_SIZE + SQUARE_SIZE // 2
 
     def draw(self, win):
-        win.blit(self.img, (self.x - SQUARE_SIZE + self.img.get_width() -
+        if self.color == WHITE:
+            win.blit(self.img, (self.x - SQUARE_SIZE + self.img.get_width() -
                             6, self.y - SQUARE_SIZE + self.img.get_height() - 3))
+        else:
+            win.blit(self.img, (self.x - SQUARE_SIZE + self.img.get_width() -
+                            6, self.y - SQUARE_SIZE + self.img.get_height() - 6))
+        
 
     def update_pos(self, row, col):
         self.row = row

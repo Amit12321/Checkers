@@ -21,7 +21,7 @@ class Move:
 class Board:
     def __init__(self):
         self.board = [["0" for i in range(ROWS)] for j in range(COLS)]
-        self.init_board()
+        self._init()
 
     def print_board(self):
         for i in range(ROWS):
@@ -29,16 +29,13 @@ class Board:
                 print(self.board[i][j], end=" ")
             print()
 
-    def init_board(self):
-        self.board = [["0" for i in range(ROWS)] for j in range(COLS)]
+    def _init(self):
         self.white_pieces = []
         self.black_pieces = []
-        self.selected_square = None
-        self.turn = BLACK
-        self.black_left = 12
-        self.white_left = 12
+        self.white_left = self.black_left = 12
         self.game_over = False
         self.winner = None
+        self.board = [["0" for i in range(ROWS)] for j in range(COLS)]
         for i in range(ROWS // 2 - 1):
             for j in range(1 - i % 2, COLS, 2):
                 self.board[i][j] = Piece(WHITE, i, j)
@@ -61,106 +58,131 @@ class Board:
                 if self.board[i][j] != "0":
                     self.board[i][j].draw(win)
 
-        if self.selected_square != None:
-            r, c = self.selected_square
-            pygame.draw.rect(win, RED, (c * SQUARE_SIZE, r *
-                                        SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 2)
-
-    def click(self, x, y):
-        if x > 0 and x < WIDTH and y > 0 and y < HEIGHT:
-            return (y // SQUARE_SIZE, x // SQUARE_SIZE)
-        return None
-
-    def cancel_select(self):
-        self.selected_square = None
-
-    def select(self, row, col):
-        self.selected_square = (row, col)
-
     def check_for_possible_moves(self, color):
         pieces = []
         if color == BLACK:
             pieces = self.black_pieces
             for p in pieces:
-                if self.get_moves(p.row, p.col, p) != []:
+                if self.get_moves(p.row, p.col) != []:
                     return True
             self.game_over = True
             self.winner = WHITE
         else:
             pieces = self.white_pieces
             for p in pieces:
-                if self.get_moves(p.row, p.col, p) != []:
+                if self.get_moves(p.row, p.col) != []:
                     return True
             self.game_over = True
             self.winner = BLACK
         return False
+    
+    def search_left(self, r_start, r_stop, d, col, piece, skipped=[]):
+        possible_moves = []
+        last = []
 
-    def get_moves(self, row, col, piece):
-        possible_moves = []  # list of rows, cols
-        if self.board[row][col] != "0":
-            d = piece.direction
-            if row + d >= 0 and row + d < ROWS and col + d >= 0 and col + d < COLS:
-                if self.board[row + d][col + d] == "0":
-                    possible_moves.append(Move(piece, row + d, col + d, None))
-                elif self.board[row + d][col + d].color != piece.color:
-                    if row + 2*d >= 0 and row + 2*d < ROWS and col + 2*d >= 0 and \
-                            col + 2*d < COLS and self.board[row + 2*d][col + 2*d] == "0":
-                        possible_moves.append(
-                            Move(piece, row + 2*d, col + 2*d, (row + d, col + d)))
-            if row + d >= 0 and row + d < ROWS and col - d >= 0 and col - d < COLS:
-                if self.board[row + d][col - d] == "0":
-                    possible_moves.append(Move(piece, row + d, col - d, None))
-                elif self.board[row + d][col - d].color != piece.color:
-                    if row + 2*d >= 0 and row + 2*d < ROWS and col - 2*d >= 0 and \
-                            col - 2*d < COLS and self.board[row + 2*d][col - 2*d] == "0":
-                        possible_moves.append(
-                            Move(piece, row + 2*d, col - 2*d, (row + d, col - d)))
+        for r in range(r_start, r_stop, d):
+            if col < 0:
+                break
+            
+            current = self.board[r][col]
+            if current == "0": #landed on an empty spot
+                if skipped and last == []: #not the first square we have moved to, but last one was empty.
+                    break
+                if skipped:
+                    possible_moves.append(Move(piece, r, col, skipped + last))
+                else:
+                    possible_moves.append(Move(piece, r, col, last))
+                
+                if last != []:
+                    if d == 1:
+                        row = min(ROWS, r + 3)
+                    else:
+                        row = max(-1, r - 3)
+                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped = last)
+                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped = last)
+                break #If we reached this line, it means that previous square was empty (because otherwise we would have a recursive call in line 101/2) and current square is empty - we should break.
+            elif current.color == piece.color:
+                break
+            else:
+                last = skipped + [(r, col)]
+                
+            col -= 1
 
-            if piece.king and row - d >= 0 and row - d < ROWS and col - d >= 0 and col - d < COLS:
-                if self.board[row - d][col - d] == "0":
-                    possible_moves.append(Move(piece, row - d, col - d, None))
-                elif self.board[row - d][col - d].color != piece.color:
-                    if row - 2*d >= 0 and row - 2*d < ROWS and col - 2*d >= 0 and \
-                            col - 2*d < COLS and self.board[row - 2*d][col - 2*d] == "0":
-                        possible_moves.append(
-                            Move(piece, row - 2*d, col - 2*d, (row - d, col - d)))
-            if piece.king and row - d >= 0 and row - d < ROWS and col + d >= 0 and col + d < COLS:
-                if self.board[row - d][col + d] == "0":
-                    possible_moves.append(Move(piece, row - d, col + d, None))
-                elif self.board[row - d][col + d].color != piece.color:
-                    if row - 2*d >= 0 and row - 2*d < ROWS and col + 2*d >= 0 and \
-                            col + 2*d < COLS and self.board[row - 2*d][col + 2*d] == "0":
-                        possible_moves.append(
-                            Move(piece, row - 2*d, col + 2*d, (row - d, col + d)))
+        return possible_moves
 
+    def search_right(self, r_start, r_stop, d, col, piece, skipped = []):
+        possible_moves = []
+        last = []
+
+        for r in range(r_start, r_stop, d):
+            if col >= ROWS:
+                break
+            
+            current = self.board[r][col]
+            if current == "0": #landed on an empty spot
+                if skipped and not last:
+                    break
+                if skipped:
+                    possible_moves.append(Move(piece, r, col, skipped + last))
+                else:
+                    possible_moves.append(Move(piece, r, col, last))
+                
+                if last:
+                    if d == 1:
+                        row = min(ROWS, r + 3)
+                    else:
+                        row = max(-1, r - 3)
+                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped = last)
+                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped = last)
+                break
+            elif current.color == piece.color:
+                break
+            else:
+                last = skipped + [(r, col)]
+
+            col += 1
+
+        return possible_moves
+
+    def get_moves(self, row, col):
+        piece = self.board[row][col]
+        if piece == "0":
+            return []
+        possible_moves = []
+        piece = self.board[row][col]
+        right = col + 1
+        left = col - 1
+        if piece.color == WHITE or piece.king:
+            possible_moves += self.search_left(row + 1, min(ROWS, row + 3), 1, left, piece)
+            possible_moves += self.search_right(row + 1, min(ROWS, row + 3), 1, right, piece)
+        if piece.color == BLACK or piece.king:
+            possible_moves += self.search_left(row - 1, max(-1, row - 3), -1, left, piece)
+            possible_moves += self.search_right(row - 1, max(-1, row - 3), -1, right, piece)
+        
         return possible_moves
 
     def make_move(self, move):
         row = move.row_to
         col = move.col_to
         piece = move.piece
-        eat = move.eat
         self.board[piece.row][piece.col] = "0"
         self.board[row][col] = piece
         piece.update_pos(row, col)
-        if eat:
-            i, j = eat
-            if piece.color == BLACK:
-                self.white_pieces.remove(self.board[i][j])
-                self.white_left -= 1
-            else:
-                self.black_pieces.remove(self.board[i][j])
-                self.black_left -= 1
-            self.board[i][j] = "0"
-            self.set_winner()
+        if move.eat:
+            for eat in move.eat:
+                i, j = eat
+                if self.board[i][j] == "0":
+                    continue
+                if piece.color == BLACK:
+                    self.white_pieces.remove(self.board[i][j])
+                    self.white_left -= 1
+                else:
+                    self.black_pieces.remove(self.board[i][j])
+                    self.black_left -= 1
+                self.board[i][j] = "0"
+                self.set_winner()
         if (piece.color == BLACK and row == 0) or (piece.color == WHITE and row == ROWS - 1):
             piece.make_king()
-
-    def change_turn(self):
-        if self.turn == BLACK:
-            self.turn = WHITE
-        else:
-            self.turn = BLACK
 
     def set_winner(self):
         if self.black_left == 0:
@@ -169,3 +191,4 @@ class Board:
         elif self.white_left == 0:
             self.game_over = True
             self.winner = BLACK
+    
