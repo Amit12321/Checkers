@@ -80,6 +80,9 @@ class Board:
         possible_moves = []
         last = []
 
+        if r_start < 0 or col < 0 or col >= ROWS:
+            return []
+        
         for r in range(r_start, r_stop, d):
             if col < 0:
                 break
@@ -98,13 +101,13 @@ class Board:
                         row = min(ROWS, r + 3)
                     else:
                         row = max(-1, r - 3)
-                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped = last)
-                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped = last)
+                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped + last)
+                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped + last)
                 break #If we reached this line, it means that previous square was empty (because otherwise we would have a recursive call in line 101/2) and current square is empty - we should break.
             elif current.color == piece.color:
                 break
             else:
-                last = skipped + [(r, col)]
+                last = [(r, col)]
                 
             col -= 1
 
@@ -113,7 +116,8 @@ class Board:
     def search_right(self, r_start, r_stop, d, col, piece, skipped = []):
         possible_moves = []
         last = []
-
+        if r_start < 0 or col < 0 or col >= ROWS:
+            return []
         for r in range(r_start, r_stop, d):
             if col >= ROWS:
                 break
@@ -124,7 +128,7 @@ class Board:
                     break
                 if skipped:
                     possible_moves.append(Move(piece, r, col, skipped + last))
-                else:
+                else: #move diagonally (i.e. to an empty spot)
                     possible_moves.append(Move(piece, r, col, last))
                 
                 if last:
@@ -132,13 +136,13 @@ class Board:
                         row = min(ROWS, r + 3)
                     else:
                         row = max(-1, r - 3)
-                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped = last)
-                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped = last)
+                    possible_moves += self.search_right(r + d, row, d, col + 1, piece, skipped + last)
+                    possible_moves += self.search_left(r + d, row, d, col - 1, piece, skipped + last)
                 break
             elif current.color == piece.color:
                 break
             else:
-                last = skipped + [(r, col)]
+                last = [(r, col)]
 
             col += 1
 
